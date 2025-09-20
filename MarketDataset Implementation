@@ -1,0 +1,15 @@
+
+class MarketDataset(Dataset):
+    def __init__(self, real_dataset, synthetic_dataset, real_ratio=0.7):self.synthetic_dataset = synthetic_dataset
+        self.real_ratio = real_ratio
+        
+    def __len__(self):
+        return len(self.real_dataset) + len(self.synthetic_dataset)
+    
+    def __getitem__(self, idx):
+        if random.random() < self.real_ratio:
+            real_idx = idx % len(self.real_dataset)
+            return self.real_dataset[real_idx]
+        else:
+            synth_idx = idx % len(self.synthetic_dataset)
+            return self.synthetic_dataset[synth_idx]
