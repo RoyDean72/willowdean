@@ -1,0 +1,80 @@
+Streamlit Dashboard Interface
+Dashboard Architecture
+The Streamlit-based dashboard provides an intuitive interface for managing all aspects of the trading system, from agent configuration to live trading deployment. [7]
+
+Training Mode with parameter configuration
+Backtesting with historical data
+Live Trading with real-time monitoring
+Performance analysis and visualization
+Streamlit app interface for trading system
+Configuration
+• Agent selection
+• Hyperparameter tuning
+• Reward weight adjustment
+• Data source configuration
+Monitoring
+• Training progress
+• Performance metrics
+• Risk indicators
+• Real-time updates
+Export
+• Model checkpoints
+• Performance reports
+• Trading logs
+• Configuration files
+Dashboard Implementation Structure
+def main():
+    st.title("AI Trading System Dashboard")
+    
+    # Sidebar navigation
+    mode = st.sidebar.radio("Mode", 
+                          ["Training", "Backtesting", "Live Trading", "Analysis"])
+    
+    if mode == "Training":
+        show_training_interface()
+    elif mode == "Backtesting":
+        show_backtesting_interface()
+    elif mode == "Live Trading":
+        show_live_trading_interface()
+    else:
+        show_analysis_interface()
+
+def show_training_interface():
+    # Agent configuration
+    agent_type = st.selectbox("Agent Type", 
+                            ["PPO", "SAC", "DDPG", "Ensemble"])
+    
+    # Hyperparameter sliders
+    learning_rate = st.slider("Learning Rate", 1e-5, 1e-3, 3e-4)
+    batch_size = st.slider("Batch Size", 32, 512, 256)
+    
+    # Reward function weights
+    st.subheader("Reward Function Weights")
+    col1, col2 = st.columns(2)
+    with col1:
+        pnl_weight = st.slider("PnL Weight", 0.0, 1.0, 0.4)
+        volatility_weight = st.slider("Volatility Weight", 0.0, 1.0, 0.3)
+    with col2:
+        drawdown_weight = st.slider("Drawdown Weight", 0.0, 1.0, 0.2)
+        cost_weight = st.slider("Cost Weight", 0.0, 1.0, 0.1)
+    
+    # Training execution
+    if st.button("Start Training"):
+        start_training_process(agent_type, learning_rate, batch_size,
+                             [pnl_weight, volatility_weight, 
+                              drawdown_weight, cost_weight])
+
+def show_analysis_interface():
+    # Sentiment analysis demo
+    text_input = st.text_area("Enter financial text for analysis:")
+    if st.button("Analyze Sentiment"):
+        sentiment_scores = analyze_sentiment(text_input)
+        visualize_sentiment(sentiment_scores)
+    
+    # Performance visualization
+    st.subheader("Performance Analysis")
+    plot_metrics = st.multiselect("Select Metrics", 
+                                ["PnL", "Sharpe Ratio", "Drawdown", 
+                                 "Volatility"])
+    if plot_metrics:
+        create_performance_dashboard(plot_metrics)
