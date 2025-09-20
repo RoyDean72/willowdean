@@ -1,0 +1,4 @@
+def update_weights(self, sharpe_ratios):
+    sharpe_array = np.array(sharpe_ratios)
+    exponent = sharpe_array / 0.01  # Temperature parameter
+    self.weights = np.exp(exponent) / np.sum(np.exp(exponent))
