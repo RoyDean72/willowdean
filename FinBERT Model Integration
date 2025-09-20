@@ -1,0 +1,13 @@
+class FinBERTSentiment:
+    def __init__(self, model_name="yiyanghkust/finbert-tone"):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        self.model.eval()
+    
+    def predict(self, text):
+        inputs = self.tokenizer(text, return_tensors="pt", 
+                              truncation=True, max_length=512)
+        with torch.no_grad():
+            outputs = self.model(**inputs)
+            probabilities = torch.softmax(outputs.logits, dim=1)
+        return probabilities.numpy()[0]
