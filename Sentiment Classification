@@ -1,0 +1,7 @@
+Sentiment Classification
+The system classifies text into three sentiment categories with confidence scores, providing nuanced market sentiment indicators.
+
+Positive
+0.67
+Neutral
+0.22
