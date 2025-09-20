@@ -1,0 +1,5 @@
+def predict(self, observation):
+    if self.weights is None:
+        self.weights = np.ones(len(self.agents)) / len(self.agents)
+    actions = [agent.predict(observation) for agent in self.agents]
+    return np.dot(self.weights, actions)
