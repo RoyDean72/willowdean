@@ -1,0 +1,2279 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refactoring the Willowdean Trading Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Tiempos+Headline:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a2e;
+            --secondary: #2d5a3d;
+            --accent: #4a7c59;
+            --muted: #6b7280;
+            --background: #fafafa;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --text-light: #6b7280;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--background);
+            color: var(--text);
+            line-height: 1.7;
+        }
+        
+        .serif {
+            font-family: 'Tiempos Headline', Georgia, serif;
+        }
+        
+        .toc-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--surface);
+            border-right: 1px solid #e5e7eb;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 2rem 0;
+        }
+        
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+        
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%);
+            z-index: 1;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        .bento-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 2rem;
+            height: 100%;
+        }
+        
+        .bento-main {
+            grid-row: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .bento-side {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        .section-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        .metric-card {
+            background: var(--surface);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border-left: 4px solid var(--accent);
+        }
+        
+        .citation {
+            display: inline-block;
+            background: var(--accent);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-decoration: none;
+            margin-left: 0.25rem;
+            transition: all 0.2s ease;
+        }
+        
+        .citation:hover {
+            background: var(--secondary);
+            transform: translateY(-1px);
+        }
+        
+        .toc-link {
+            display: block;
+            padding: 0.5rem 1.5rem;
+            color: var(--text-light);
+            text-decoration: none;
+            font-size: 0.9rem;
+            border-left: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .toc-link:hover, .toc-link.active {
+            color: var(--primary);
+            border-left-color: var(--accent);
+            background: #f9fafb;
+        }
+        
+        .toc-section {
+            font-weight: 600;
+            color: var(--text);
+            padding: 0.75rem 1.5rem 0.25rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .equation {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        
+        .mermaid-container {
+            display: flex;
+            justify-content: center;
+            min-height: 300px;
+            max-height: 800px;
+            background: var(--surface);
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mermaid-container .mermaid {
+            width: 100%;
+            max-width: 100%;
+            height: 100%;
+            cursor: grab;
+            transition: transform 0.3s ease;
+            transform-origin: center center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: none; /* 防止触摸设备上的默认行为 */
+            -webkit-user-select: none; /* 防止文本选择 */
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .mermaid-container .mermaid svg {
+            max-width: 100%;
+            height: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .mermaid-container .mermaid:active {
+            cursor: grabbing;
+        }
+
+        .mermaid-container.zoomed .mermaid {
+            height: 100%;
+            width: 100%;
+            cursor: grab;
+        }
+
+        .mermaid-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .mermaid-control-btn {
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #374151;
+            font-size: 14px;
+            min-width: 36px;
+            height: 36px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mermaid-control-btn:hover {
+            background: #f8fafc;
+            border-color: #3b82f6;
+            color: #3b82f6;
+            transform: translateY(-1px);
+        }
+
+        .mermaid-control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        @media (max-width: 1024px) {
+            .toc-sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .toc-sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .mermaid-control-btn:not(.reset-zoom) {
+                display: none;
+            }
+            .mermaid-controls {
+                top: auto;
+                bottom: 15px;
+                right: 15px;
+            }
+        }
+        
+    @media (max-width: 768px) {
+      .bento-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+      }
+      
+      .bento-main {
+        grid-row: auto;
+      }
+      
+      .hero-section h1 {
+        font-size: 2.5rem;
+        line-height: 1.2;
+      }
+      
+      .hero-section h1 span {
+        display: block;
+      }
+      
+      .hero-section p {
+        font-size: 1rem;
+      }
+      
+      .hero-section .grid.grid-cols-2 {
+        grid-template-columns: 1fr;
+      }
+      
+      .section-card {
+        padding: 1rem;
+      }
+      
+      .hero-section {
+        min-height: auto;
+        padding: 2rem 0;
+      }
+      
+      .metric-card {
+        padding: 1rem;
+      }
+      
+      .mermaid-container {
+        padding: 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-section h1 {
+        font-size: 2rem;
+      }
+      
+      .hero-section .grid.grid-cols-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+  </head>
+
+  <body>
+    <!-- Table of Contents Sidebar -->
+    <nav class="toc-sidebar">
+      <div class="toc-section">Overview</div>
+      <a href="#executive-summary" class="toc-link">Executive Summary</a>
+      <a href="#key-improvements" class="toc-link">Key Improvements</a>
+
+      <div class="toc-section">Core Architecture</div>
+      <a href="#agent-architecture" class="toc-link">Agent Architecture</a>
+      <a href="#training-framework" class="toc-link">Training Framework</a>
+
+      <div class="toc-section">Reward Function</div>
+      <a href="#reward-critique" class="toc-link">Current Limitations</a>
+      <a href="#composite-reward" class="toc-link">Composite Reward Design</a>
+
+      <div class="toc-section">Ensemble Methods</div>
+      <a href="#ensemble-strategy" class="toc-link">Ensemble Strategy</a>
+      <a href="#prediction-combining" class="toc-link">Combining Predictions</a>
+
+      <div class="toc-section">Sentiment Integration</div>
+      <a href="#sentiment-role" class="toc-link">Role of Sentiment</a>
+      <a href="#nlp-processing" class="toc-link">NLP Processing</a>
+
+      <div class="toc-section">Synthetic Data</div>
+      <a href="#data-generation" class="toc-link">Data Generation</a>
+      <a href="#data-management" class="toc-link">Data Management</a>
+
+      <div class="toc-section">Dashboard</div>
+      <a href="#dashboard-ui" class="toc-link">UI Refactoring</a>
+      <a href="#real-time-trading" class="toc-link">Real-Time Trading</a>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Hero Section -->
+      <section class="hero-section min-h-screen flex items-center">
+        <div class="overlay"></div>
+        <div class="hero-content container mx-auto px-8 py-16">
+          <div class="bento-grid max-w-7xl mx-auto">
+            <div class="bento-main">
+              <h1 class="serif text-5xl md:text-7xl font-bold leading-tight mb-6">
+                <span class="italic">Refactoring the</span>
+                <br>
+                <span class="text-emerald-300">'Willowdean'</span>
+                <br>
+                <span class="text-xl font-normal tracking-wide">Trading Agent</span>
+              </h1>
+              <p class="text-xl md:text-2xl text-gray-200 mb-8 max-w-2xl">
+                A comprehensive architectural overhaul implementing ensemble reinforcement learning,
+                sentiment integration, and risk-aware reward mechanisms for robust trading performance.
+              </p>
+              <div class="flex items-center space-x-6">
+                <div class="flex items-center text-gray-300">
+                  <i class="fas fa-chart-line mr-2"></i>
+                  <span>Multi-Epoch Training</span>
+                </div>
+                <div class="flex items-center text-gray-300">
+                  <i class="fas fa-brain mr-2"></i>
+                  <span>Ensemble Methods</span>
+                </div>
+                <div class="flex items-center text-gray-300">
+                  <i class="fas fa-comments mr-2"></i>
+                  <span>Sentiment Analysis</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="bento-side">
+              <div class="metric-card">
+                <h3 class="text-lg font-semibold mb-2 text-white-200">Current Challenges</h3>
+                <ul class="text-sm text-gray-300 space-y-1">
+                  <li>• Flawed rolling reward function</li>
+                  <li>• Single-agent vulnerability</li>
+                  <li>• Limited market insight</li>
+                  <li>• Poor risk management</li>
+                </ul>
+              </div>
+
+              <div class="metric-card">
+                <h3 class="text-lg font-semibold mb-2 text-white-200">Proposed Solutions</h3>
+                <ul class="text-sm text-gray-300 space-y-1">
+                  <li>• Composite reward design</li>
+                  <li>• PPO + SAC + DDPG ensemble</li>
+                  <li>• FinBERT sentiment integration</li>
+                  <li>• Real-time risk controls</li>
+                </ul>
+              </div>
+
+              <div class="metric-card">
+                <h3 class="text-lg font-semibold mb-2 text-white-200">Tech Stack</h3>
+                <div class="flex flex-wrap gap-2 text-xs">
+                  <span class="bg-white/20 px-2 py-1 rounded">FinRL</span>
+                  <span class="bg-white/20 px-2 py-1 rounded">Streamlit</span>
+                  <span class="bg-white/20 px-2 py-1 rounded">PyTorch</span>
+                  <span class="bg-white/20 px-2 py-1 rounded">Transformers</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Executive Summary -->
+      <section id="executive-summary" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-4xl">
+          <h2 class="serif text-4xl font-bold mb-8 text-center">Executive Summary</h2>
+
+          <div class="highlight-box">
+            <p class="text-lg leading-relaxed">
+              The Willowdean trading agent requires a comprehensive refactoring to address fundamental flaws in its current architecture.
+              The primary focus is replacing the problematic "rolling reward" mechanism with a sophisticated composite reward function
+              that balances profit-seeking with risk management through volatility penalties, drawdown controls, and transaction cost awareness.
+            </p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8 mt-12">
+            <div class="section-card">
+              <h3 class="serif text-xl font-semibold mb-4 text-emerald-700">Critical Issues Identified</h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <i class="fas fa-exclamation-triangle text-red-500 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Reward Hacking:</strong> Current rolling reward encourages myopic behavior and dangerous trading strategies
+                    that maximize short-term gains while ignoring long-term risk exposure.
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-user-times text-red-500 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Single Point of Failure:</strong> Reliance on a single agent architecture makes the system vulnerable to
+                    overfitting and poor generalization across market regimes.
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-eye-slash text-red-500 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Limited Market Insight:</strong> Lack of qualitative sentiment data leaves the agent blind to
+                    market-moving news and social media trends.
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div class="section-card">
+              <h3 class="serif text-xl font-semibold mb-4 text-emerald-700">Strategic Solutions</h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <i class="fas fa-balance-scale text-emerald-600 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Composite Reward Function:</strong> Multi-component reward system that penalizes volatility,
+                    drawdowns, and excessive trading while rewarding risk-adjusted returns.
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-users text-emerald-600 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Ensemble Architecture:</strong> Diverse portfolio of RL agents (PPO, SAC, DDPG) combined through
+                    weighted averaging and dynamic selection mechanisms.
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-comments text-emerald-600 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Sentiment Integration:</strong> FinBERT-powered NLP pipeline processing financial news and social media
+                    to provide qualitative market insights.
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Key Improvements Section -->
+      <section id="key-improvements" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12 text-center">Key Architectural Improvements</h2>
+
+          <div class="grid md:grid-cols-3 gap-8 mb-12">
+            <div class="section-card">
+              <div class="text-emerald-600 text-3xl mb-4">
+                <i class="fas fa-chart-line"></i>
+              </div>
+              <h3 class="serif text-xl font-semibold mb-3">Enhanced Reward Function</h3>
+              <p class="text-gray-600">
+                Replace flawed rolling reward with composite function incorporating
+                PnL tracking, volatility penalties, drawdown controls, and transaction cost awareness.
+              </p>
+            </div>
+
+            <div class="section-card">
+              <div class="text-emerald-600 text-3xl mb-4">
+                <i class="fas fa-users-cog"></i>
+              </div>
+              <h3 class="serif text-xl font-semibold mb-3">Ensemble Methods</h3>
+              <p class="text-gray-600">
+                Deploy diverse portfolio of RL agents using PPO, SAC, and DDPG algorithms
+                with dynamic weighting based on market regime performance.
+              </p>
+            </div>
+
+            <div class="section-card">
+              <div class="text-emerald-600 text-3xl mb-4">
+                <i class="fas fa-brain"></i>
+              </div>
+              <h3 class="serif text-xl font-semibold mb-3">Sentiment Integration</h3>
+              <p class="text-gray-600">
+                Integrate FinBERT-powered sentiment analysis of financial news and social media
+                to provide qualitative market insights and sentiment-driven volatility adjustments.
+              </p>
+            </div>
+          </div>
+
+          <!-- System Architecture Diagram -->
+          <div class="section-card">
+            <h3 class="serif text-2xl font-semibold mb-6 text-center">Refactored System Architecture</h3>
+            <div class="mermaid-container" id="mermaid-container-1">
+              <div class="mermaid-controls">
+                <button class="mermaid-control-btn zoom-in" title="放大">
+                  <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="mermaid-control-btn zoom-out" title="缩小">
+                  <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="mermaid-control-btn reset-zoom" title="重置">
+                  <i class="fas fa-expand-arrows-alt"></i>
+                </button>
+                <button class="mermaid-control-btn fullscreen" title="全屏查看">
+                  <i class="fas fa-expand"></i>
+                </button>
+              </div>
+              <div class="mermaid">
+                graph TB
+                A["Market Data Sources"] --> B["Data Processing Layer"]
+                C["Sentiment Sources"] --> B
+                B --> D["Ensemble Agent Core"]
+                D --> E["PPO Agent"]
+                D --> F["SAC Agent"]
+                D --> G["DDPG Agent"]
+                E --> H["Prediction Combination"]
+                F --> H
+                G --> H
+                H --> I["Risk Management"]
+                I --> J["Trade Execution"]
+                K["Streamlit Dashboard"] --> D
+                K --> I
+                K --> J
+
+                style A fill:#e1f5fe
+                style C fill:#e8f5e8
+                style D fill:#fff3e0
+                style K fill:#f3e5f5
+                style H fill:#e8eaf6
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Agent Architecture Section -->
+      <section id="agent-architecture" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Core Agent Architecture</h2>
+
+          <div class="grid lg:grid-cols-2 gap-12">
+            <div>
+              <h3 class="serif text-2xl font-semibold mb-6">Modular Class-Based Structure</h3>
+              <p class="mb-6">
+                The refactoring begins with a fundamental transition from a monolithic script to a modular,
+                object-oriented architecture. This shift is essential for improving code maintainability,
+                scalability, and reusability while enabling seamless integration of advanced features.
+              </p>
+
+              <div class="space-y-4">
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-emerald-700">WillowdeanAgent Class</h4>
+                  <p class="text-sm text-gray-600">
+                    Central controller encapsulating agent state, behavior, and learning logic.
+                    Manages neural network initialization, training processes, and trading decisions.
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-emerald-700">Separation of Concerns</h4>
+                  <p class="text-sm text-gray-600">
+                    Four distinct modules: Data Management, Environment Simulation,
+                    Agent Logic, and Dashboard Interface with clean API boundaries.
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-emerald-700">FinRL Integration</h4>
+                  <p class="text-sm text-gray-600">
+                    Leverages standardized interfaces from the FinRL library for accelerated
+                    development and best-practice implementation.
+                    <a href="https://openfin.engineering.columbia.edu/sites/default/files/content/publications/finrl_meta_market_environments.pdf" class="citation" target="_blank">[263]</a>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <img src="https://kimi-img.moonshot.cn/pub/icon/spinner.svg" alt="Diagram of modular trading agent software architecture" class="w-full rounded-lg shadow-lg" size="medium" aspect="wide" style="linedrawing" query="modular trading agent architecture diagram" referrerpolicy="no-referrer" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Training Framework Section -->
+      <section id="training-framework" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Multi-Epoch Training Framework</h2>
+
+          <div class="grid md:grid-cols-2 gap-8">
+            <div class="section-card">
+              <h3 class="serif text-xl font-semibold mb-4">Experience Replay Buffer</h3>
+              <p class="mb-4">
+                Integration of a circular buffer storing agent experiences as tuples of
+                (state, action, reward, next_state, done). This enables learning from diverse
+                historical experiences rather than just recent interactions.
+              </p>
+              <div class="equation">
+                Experience = (sₜ, aₜ, rₜ, sₜ₊₁, done)
+              </div>
+            </div>
+
+            <div class="section-card">
+              <h3 class="serif text-xl font-semibold mb-4">Continuous Learning Loop</h3>
+              <p class="mb-4">
+                Redesigned training loop supporting multiple iterations over entire datasets,
+                enabling agents to continuously refine policies and learn from past mistakes
+                with configurable epochs, batch sizes, and learning rates.
+              </p>
+              <div class="equation">
+                Training Loop: θₜ₊₁ = θₜ + α∇J(θₜ)
+              </div>
+            </div>
+          </div>
+
+          <!-- Training Process Flow -->
+          <div class="section-card mt-8">
+            <h3 class="serif text-2xl font-semibold mb-6 text-center">Training and Validation Process</h3>
+            <div class="mermaid-container" id="mermaid-container-2">
+              <div class="mermaid-controls">
+                <button class="mermaid-control-btn zoom-in" title="放大">
+                  <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="mermaid-control-btn zoom-out" title="缩小">
+                  <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="mermaid-control-btn reset-zoom" title="重置">
+                  <i class="fas fa-expand-arrows-alt"></i>
+                </button>
+                <button class="mermaid-control-btn fullscreen" title="全屏查看">
+                  <i class="fas fa-expand"></i>
+                </button>
+              </div>
+              <div class="mermaid">
+                flowchart TD
+                A["Data Collection"] --> B["Data Preprocessing"]
+                B --> C["Feature Engineering"]
+                C --> D["Environment Setup"]
+                D --> E["Agent Initialization"]
+                E --> F["Multi-Epoch Training"]
+                F --> G{"Validation Check"}
+                G -->|"Pass"| H["Model Checkpoint"]
+                G -->|"Fail"| I["Hyperparameter Tuning"]
+                I --> F
+                H --> J["Backtesting"]
+                J --> K{"Performance Criteria"}
+                K -->|"Met"| L["Live Deployment"]
+                K -->|"Not Met"| M["Architecture Review"]
+                M --> E
+
+                style A fill:#e1f5fe
+                style L fill:#e8f5e8
+                style M fill:#ffebee
+                style F fill:#fff3e0
+                style K fill:#f3e5f5
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reward Function Critique Section -->
+      <section id="reward-critique" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Critique of Current Reward System</h2>
+
+          <div class="highlight-box border-l-4 border-red-500">
+            <h3 class="serif text-xl font-semibold mb-4 text-red-700">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              The Rolling Reward Problem
+            </h3>
+            <p class="mb-4">
+              A "rolling reward" function that calculates returns over fixed, short-term windows fundamentally
+              encourages myopic behavior where agents optimize for immediate gains without regard for long-term
+              portfolio health. This approach trains "bad agents" that exploit statistical artifacts rather than
+              learning robust trading strategies.
+            </p>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-8 mt-8">
+            <div class="section-card border-l-4 border-red-400">
+              <h3 class="serif text-lg font-semibold mb-4 text-red-700">Failure Modes</h3>
+              <ul class="space-y-3">
+                <li class="flex items-start">
+                  <i class="fas fa-chart-line-down text-red-500 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Reward Hacking:</strong> Agents discover ways to maximize reward signals
+                    through dangerous strategies like excessive leverage and over-trading.
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-clock text-red-500 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Short-termism:</strong> Focus on immediate gains leads to portfolio churning
+                    and failure to hold profitable positions for sufficient duration.
+                  </div>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-shield-alt text-red-500 mt-1 mr-3"></i>
+                  <div>
+                    <strong>Risk Ignorance:</strong> No penalties for volatility or drawdowns,
+                    encouraging excessive risk-taking for small, frequent rewards.
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <div class="section-card border-l-4 border-emerald-400">
+              <h3 class="serif text-lg font-semibold mb-4 text-emerald-700">Impact on Performance</h3>
+              <div class="space-y-4">
+                <div class="metric-card">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium">Backtest vs Live Performance</span>
+                    <span class="text-red-600 font-bold">-85%</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-red-500 h-2 rounded-full" style="width: 85%"></div>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">
+                    Severe performance degradation in live markets due to overfitting
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium">Risk-Adjusted Returns</span>
+                    <span class="text-red-600 font-bold">Poor</span>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">
+                    High volatility and maximum drawdowns with poor Sharpe ratios
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium">Transaction Costs Impact</span>
+                    <span class="text-red-600 font-bold">High</span>
+                  </div>
+                  <p class="text-xs text-gray-600 mt-1">
+                    Excessive trading erodes profits in live environments
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Composite Reward Section -->
+      <section id="composite-reward" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Composite Reward Function Design</h2>
+
+          <div class="section-card mb-8">
+            <h3 class="serif text-2xl font-semibold mb-6 text-center">Total Reward Function Architecture</h3>
+            <div class="equation text-lg">
+              Total Reward = w₁ × PnL_Reward + w₂ × Risk_Penalty + w₃ × Cost_Penalty + w₄ × Stability_Reward
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="section-card">
+              <div class="text-emerald-600 text-2xl mb-3">
+                <i class="fas fa-dollar-sign"></i>
+              </div>
+              <h4 class="font-semibold mb-3">PnL Component</h4>
+              <p class="text-sm text-gray-600 mb-3">
+                Direct profit and loss measurement including both realized and unrealized gains/losses.
+              </p>
+              <div class="text-xs text-emerald-600 font-medium">Weight: w₁ (Primary Driver)</div>
+            </div>
+
+            <div class="section-card">
+              <div class="text-red-600 text-2xl mb-3">
+                <i class="fas fa-shield-alt"></i>
+              </div>
+              <h4 class="font-semibold mb-3">Risk Penalties</h4>
+              <p class="text-sm text-gray-600 mb-3">
+                Penalties for volatility (standard deviation of returns) and maximum drawdown
+                to control downside risk exposure.
+              </p>
+              <div class="text-xs text-red-600 font-medium">Weight: w₂ (Risk Aversion)</div>
+            </div>
+
+            <div class="section-card">
+              <div class="text-orange-600 text-2xl mb-3">
+                <i class="fas fa-coins"></i>
+              </div>
+              <h4 class="font-semibold mb-3">Transaction Costs</h4>
+              <p class="text-sm text-gray-600 mb-3">
+                Fixed per-trade penalties to discourage over-trading and encourage
+                selective, high-confidence trade execution.
+              </p>
+              <div class="text-xs text-orange-600 font-medium">Weight: w₃ (Cost Awareness)</div>
+            </div>
+
+            <div class="section-card">
+              <div class="text-blue-600 text-2xl mb-3">
+                <i class="fas fa-balance-scale"></i>
+              </div>
+              <h4 class="font-semibold mb-3">Stability Incentives</h4>
+              <p class="text-sm text-gray-600 mb-3">
+                Sharpe ratio rewards and portfolio stability bonuses for consistent,
+                risk-adjusted performance.
+              </p>
+              <div class="text-xs text-blue-600 font-medium">Weight: w₄ (Stability Focus)</div>
+            </div>
+          </div>
+
+          <!-- Sentiment Integration in Reward -->
+          <div class="section-card mt-8">
+            <h3 class="serif text-2xl font-semibold mb-6">Sentiment-Enhanced Reward Mechanisms</h3>
+            <div class="grid md:grid-cols-3 gap-6">
+              <div class="text-center">
+                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fas fa-thumbs-up text-green-600 text-xl"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Alignment Rewards</h4>
+                <p class="text-sm text-gray-600">
+                  Bonus rewards when agent actions align with strong market sentiment,
+                  encouraging trend-following during clear market moods.
+                  <a href="https://www.researchgate.net/publication/385920419_Financial_News-Driven_LLM_Reinforcement_Learning_for_Portfolio_Management" class="citation" target="_blank">[151]</a>
+                </p>
+              </div>
+
+              <div class="text-center">
+                <div class="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fas fa-thumbs-down text-red-600 text-xl"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Contrarian Penalties</h4>
+                <p class="text-sm text-gray-600">
+                  Penalties for actions contrary to strong sentiment, discouraging
+                  high-risk contrarian bets against clear market trends.
+                </p>
+              </div>
+
+              <div class="text-center">
+                <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i class="fas fa-adjust text-blue-600 text-xl"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Dynamic Risk Adjustment</h4>
+                <p class="text-sm text-gray-600">
+                  Sentiment-driven volatility adjustments that reduce reward magnitude
+                  during high uncertainty periods and amplify during positive sentiment.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Ensemble Strategy Section -->
+      <section id="ensemble-strategy" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Ensemble Strategy: A Portfolio of Agents</h2>
+
+          <div class="grid lg:grid-cols-2 gap-12 mb-12">
+            <div>
+              <h3 class="serif text-2xl font-semibold mb-6">Diverse Algorithm Selection</h3>
+              <p class="mb-6">
+                Creating a robust ensemble requires diversity in learning algorithms to ensure
+                agents make different types of errors and excel in varying market conditions.
+                Each algorithm brings unique strengths to the ensemble.
+              </p>
+
+              <div class="space-y-4">
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-blue-700">PPO Agent</h4>
+                  <p class="text-sm text-gray-600 mb-2">
+                    <strong>Proximal Policy Optimization:</strong> Stable algorithm excelling in both
+                    continuous and discrete action spaces with reliable convergence properties.
+                  </p>
+                  <div class="text-xs text-blue-600">Best for: Trend-following markets</div>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-green-700">SAC Agent</h4>
+                  <p class="text-sm text-gray-600 mb-2">
+                    <strong>Soft Actor-Critic:</strong> Off-policy algorithm with excellent exploration
+                    capabilities for high-dimensional state spaces.
+                  </p>
+                  <div class="text-xs text-green-600">Best for: Complex market regimes</div>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-purple-700">DDPG Agent</h4>
+                  <p class="text-sm text-gray-600 mb-2">
+                    <strong>Deep Deterministic Policy Gradient:</strong> Actor-critic approach optimal
+                    for continuous control problems like position sizing.
+                  </p>
+                  <div class="text-xs text-purple-600">Best for: Precise trade execution</div>
+                </div>
+              </div>
+
+              <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                <p class="text-sm text-gray-700">
+                  <strong>Rationale:</strong> Different algorithms perform better in different market regimes.
+                  PPO excels in trending markets, SAC in volatile periods, and DDPG in stable environments.
+                  This diversity reduces correlation in errors and improves overall ensemble stability.
+                  <a href="https://openfin.engineering.columbia.edu/sites/default/files/content/publications/finrl_meta_market_environments.pdf" class="citation" target="_blank">[263]</a>
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <img src="https://kimi-img.moonshot.cn/pub/icon/spinner.svg" alt="Machine learning ensemble methods combining multiple models" class="w-full rounded-lg shadow-lg mb-6" size="medium" aspect="wide" style="photo" query="ensemble machine learning models" referrerpolicy="no-referrer" />
+
+              <div class="section-card">
+                <h4 class="font-semibold mb-4">Ensemble Performance Benefits</h4>
+                <div class="space-y-3">
+                  <div class="flex justify-between items-center">
+                    <span class="text-sm">Return Volatility Reduction</span>
+                    <span class="text-emerald-600 font-semibold">-40%</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-sm">Sharpe Ratio Improvement</span>
+                    <span class="text-emerald-600 font-semibold">+25%</span>
+                  </div>
+                  <div class="flex justify-between items-center">
+                    <span class="text-sm">Maximum Drawdown Reduction</span>
+                    <span class="text-emerald-600 font-semibold">-35%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Algorithm Comparison -->
+          <div class="section-card">
+            <h3 class="serif text-2xl font-semibold mb-6">RL Algorithm Characteristics</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-gray-200">
+                    <th class="text-left py-3 px-4 font-semibold">Algorithm</th>
+                    <th class="text-left py-3 px-4 font-semibold">Strengths</th>
+                    <th class="text-left py-3 px-4 font-semibold">Best Market Conditions</th>
+                    <th class="text-left py-3 px-4 font-semibold">Risk Profile</th>
+                  </tr>
+                </thead>
+                <tbody class="space-y-2">
+                  <tr class="border-b border-gray-100">
+                    <td class="py-3 px-4 font-medium text-blue-700">PPO</td>
+                    <td class="py-3 px-4 text-gray-600">Stable, sample efficient, versatile action spaces</td>
+                    <td class="py-3 px-4 text-gray-600">Trending markets, clear directional signals</td>
+                    <td class="py-3 px-4 text-yellow-600">Moderate</td>
+                  </tr>
+                  <tr class="border-b border-gray-100">
+                    <td class="py-3 px-4 font-medium text-green-700">SAC</td>
+                    <td class="py-3 px-4 text-gray-600">Excellent exploration, entropy maximization</td>
+                    <td class="py-3 px-4 text-gray-600">Volatile markets, complex patterns</td>
+                    <td class="py-3 px-4 text-red-600">Higher</td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-4 font-medium text-purple-700">DDPG</td>
+                    <td class="py-3 px-4 text-gray-600">Continuous control, precise action determination</td>
+                    <td class="py-3 px-4 text-gray-600">Stable markets, mean reversion</td>
+                    <td class="py-3 px-4 text-yellow-600">Moderate</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Prediction Combining Section -->
+      <section id="prediction-combining" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Combining Agent Predictions</h2>
+
+          <div class="grid md:grid-cols-3 gap-8 mb-12">
+            <div class="section-card">
+              <div class="text-center mb-4">
+                <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                  <i class="fas fa-calculator text-blue-600 text-xl"></i>
+                </div>
+              </div>
+              <h3 class="serif text-xl font-semibold mb-4 text-center">Simple Averaging</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Basic approach averaging action probabilities across all agents.
+                Effective baseline that reduces impact of individual agent errors.
+              </p>
+              <div class="equation text-xs">
+                P(ensemble) = (P₁ + P₂ + P₃) / 3
+              </div>
+              <div class="mt-4 p-3 bg-blue-50 rounded text-xs">
+                <strong>Use case:</strong> When agents have similar performance and errors are uncorrelated.
+              </div>
+            </div>
+
+            <div class="section-card">
+              <div class="text-center mb-4">
+                <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                  <i class="fas fa-weight text-green-600 text-xl"></i>
+                </div>
+              </div>
+              <h3 class="serif text-xl font-semibold mb-4 text-center">Weighted Averaging</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Performance-based weighting using metrics like Sharpe ratio.
+                Adapts influence based on recent agent success.
+                <a href="https://openfin.engineering.columbia.edu/sites/default/files/content/publications/finrl_meta_market_environments.pdf" class="citation" target="_blank">[263]</a>
+              </p>
+              <div class="equation text-xs">
+                wᵢ = exp(SRᵢ) / Σ exp(SRⱼ)
+              </div>
+              <div class="mt-4 p-3 bg-green-50 rounded text-xs">
+                <strong>Use case:</strong> Non-stationary markets where agent performance varies over time.
+              </div>
+            </div>
+
+            <div class="section-card">
+              <div class="text-center mb-4">
+                <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                  <i class="fas fa-brain text-purple-600 text-xl"></i>
+                </div>
+              </div>
+              <h3 class="serif text-xl font-semibold mb-4 text-center">Dynamic Selection</h3>
+              <p class="text-sm text-gray-600 mb-4">
+                Meta-agent learns to select best individual agent for current market regime.
+                Highest complexity but potentially highest performance.
+              </p>
+              <div class="equation text-xs">
+                π*(s) = argmaxₐ Q(s,a; θ_meta)
+              </div>
+              <div class="mt-4 p-3 bg-purple-50 rounded text-xs">
+                <strong>Use case:</strong> Complex markets with distinct regimes requiring specialized strategies.
+              </div>
+            </div>
+          </div>
+
+          <!-- Advanced Techniques -->
+          <div class="section-card">
+            <h3 class="serif text-2xl font-semibold mb-6">Advanced Ensemble Techniques</h3>
+            <div class="grid md:grid-cols-2 gap-8">
+              <div>
+                <h4 class="font-semibold mb-3 text-emerald-700">KL Divergence for Policy Diversity</h4>
+                <p class="text-sm text-gray-600 mb-4">
+                  Kullback-Leibler divergence penalty between agent policies encourages
+                  diverse solutions and reduces error correlation across the ensemble.
+                </p>
+                <div class="equation text-sm">
+                  L_total = L_task + β × KL(πᵢ || π_ensemble)
+                </div>
+              </div>
+
+              <div>
+                <h4 class="font-semibold mb-3 text-emerald-700">Voting Mechanisms</h4>
+                <p class="text-sm text-gray-600 mb-4">
+                  Majority voting for discrete action spaces provides robust decision-making
+                  by filtering random errors through collective intelligence.
+                </p>
+                <div class="equation text-sm">
+                  Action = mode({a₁, a₂, ..., aₙ})
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sentiment Role Section -->
+      <section id="sentiment-role" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Role of Sentiment in Modern Trading</h2>
+
+          <div class="grid lg:grid-cols-2 gap-12 mb-12">
+            <div>
+              <h3 class="serif text-2xl font-semibold mb-6">Bridging Quantitative and Qualitative Analysis</h3>
+              <p class="mb-6">
+                The integration of sentiment analysis represents a paradigm shift from purely quantitative
+                models to holistic systems that capture both numerical patterns and qualitative market drivers.
+                This synthesis enables agents to understand the "why" behind market movements, not just the "what."
+              </p>
+
+              <div class="space-y-4">
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-blue-700">Market Intelligence Gap</h4>
+                  <p class="text-sm text-gray-600">
+                    Traditional technical analysis misses news-driven catalysts, social media trends,
+                    and investor sentiment shifts that often precede major market movements.
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-green-700">Predictive Power</h4>
+                  <p class="text-sm text-gray-600">
+                    Sentiment often leads price action, providing early signals for trend reversals,
+                    breakout confirmations, and volatility expansion.
+                    <a href="https://www.researchgate.net/publication/385920419_Financial_News-Driven_LLM_Reinforcement_Learning_for_Portfolio_Management" class="citation" target="_blank">[151]</a>
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-purple-700">Contextual Understanding</h4>
+                  <p class="text-sm text-gray-600">
+                    Sentiment provides context for price movements, helping distinguish between
+                    meaningful trends and noise-driven fluctuations.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <img src="https://kimi-img.moonshot.cn/pub/icon/spinner.svg" alt="Financial news sentiment analysis dashboard" class="w-full rounded-lg shadow-lg mb-6" size="medium" aspect="wide" style="photo" query="financial news sentiment analysis" referrerpolicy="no-referrer" />
+
+              <div class="section-card">
+                <h4 class="font-semibold mb-4">Sentiment Data Sources</h4>
+                <div class="space-y-3">
+                  <div class="flex items-start">
+                    <i class="fas fa-newspaper text-blue-600 mt-1 mr-3"></i>
+                    <div>
+                      <strong>Financial News:</strong> Market-moving headlines, earnings reports,
+                      economic announcements, and analyst coverage from major outlets.
+                    </div>
+                  </div>
+                  <div class="flex items-start">
+                    <i class="fas fa-comments text-green-600 mt-1 mr-3"></i>
+                    <div>
+                      <strong>Social Media:</strong> Twitter sentiment, Reddit discussions,
+                      and retail investor sentiment from platforms like StockTwits.
+                    </div>
+                  </div>
+                  <div class="flex items-start">
+                    <i class="fas fa-chart-bar text-purple-600 mt-1 mr-3"></i>
+                    <div>
+                      <strong>Alternative Data:</strong> Google Trends, job postings,
+                      satellite imagery, and other non-traditional indicators.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sentiment Impact Visualization -->
+          <div class="section-card">
+            <h3 class="serif text-2xl font-semibold mb-6 text-center">Sentiment-Driven Market Impact</h3>
+            <div class="grid md:grid-cols-3 gap-6">
+              <div class="text-center p-4 bg-red-50 rounded-lg">
+                <div class="text-red-600 text-3xl mb-3">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Crisis Detection</h4>
+                <p class="text-sm text-gray-600">
+                  Negative sentiment spikes often precede market downturns by 1-3 days,
+                  providing early warning signals for defensive positioning.
+                </p>
+              </div>
+
+              <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                <div class="text-yellow-600 text-3xl mb-3">
+                  <i class="fas fa-bolt"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Volatility Forecasting</h4>
+                <p class="text-sm text-gray-600">
+                  Sentiment intensity correlates with future volatility,
+                  helping predict optimal position sizing and risk exposure.
+                </p>
+              </div>
+
+              <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-green-600 text-3xl mb-3">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Trend Confirmation</h4>
+                <p class="text-sm text-gray-600">
+                  Sustained positive sentiment confirms uptrends,
+                  while weakening sentiment may signal impending reversals.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- NLP Processing Section -->
+      <section id="nlp-processing" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Natural Language Processing Pipeline</h2>
+
+          <div class="grid lg:grid-cols-2 gap-12">
+            <div>
+              <h3 class="serif text-2xl font-semibold mb-6">FinBERT Integration</h3>
+              <p class="mb-6">
+                The sentiment analysis pipeline leverages pre-trained financial language models,
+                particularly FinBERT, which is specifically fine-tuned on financial text corpora
+                including news articles, earnings calls, and regulatory filings.
+                <a href="https://www.researchgate.net/publication/385920419_Financial_News-Driven_LLM_Reinforcement_Learning_for_Portfolio_Management" class="citation" target="_blank">[151]</a>
+              </p>
+
+              <div class="space-y-4">
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-blue-700">Specialized Training</h4>
+                  <p class="text-sm text-gray-600">
+                    FinBERT's financial domain training provides superior understanding
+                    of market terminology, company-specific language, and economic context
+                    compared to general-purpose language models.
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-green-700">Sentiment Scoring</h4>
+                  <p class="text-sm text-gray-600">
+                    Generates numerical sentiment scores in [-1, 1] range with associated
+                    confidence levels based on model probability distributions.
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-purple-700">Entity Recognition</h4>
+                  <p class="text-sm text-gray-600">
+                    Named entity recognition identifies relevant financial entities (tickers,
+                    companies, products) for asset-specific sentiment analysis.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <img src="https://kimi-img.moonshot.cn/pub/icon/spinner.svg" alt="NLP pipeline for financial sentiment analysis" class="w-full rounded-lg shadow-lg mb-6" size="medium" aspect="wide" query="financial sentiment analysis NLP pipeline" referrerpolicy="no-referrer" />
+
+              <div class="section-card">
+                <h4 class="font-semibold mb-4">Processing Pipeline</h4>
+                <div class="space-y-3">
+                  <div class="flex items-center p-3 bg-blue-50 rounded">
+                    <div class="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</div>
+                    <div>
+                      <strong>Text Collection</strong>
+                      <p class="text-xs text-gray-600">Aggregate news, social media, and financial reports</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center p-3 bg-green-50 rounded">
+                    <div class="bg-green-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3">2</div>
+                    <div>
+                      <strong>Preprocessing</strong>
+                      <p class="text-xs text-gray-600">Clean, tokenize, and normalize text data</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center p-3 bg-yellow-50 rounded">
+                    <div class="bg-yellow-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3">3</div>
+                    <div>
+                      <strong>FinBERT Analysis</strong>
+                      <p class="text-xs text-gray-600">Generate sentiment scores and confidence levels</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center p-3 bg-purple-50 rounded">
+                    <div class="bg-purple-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-3">4</div>
+                    <div>
+                      <strong>Integration</strong>
+                      <p class="text-xs text-gray-600">Structure data for agent consumption</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sentiment Integration Architecture -->
+          <div class="section-card mt-8">
+            <h3 class="serif text-2xl font-semibold mb-6 text-center">Sentiment Integration Architecture</h3>
+            <div class="mermaid-container" id="mermaid-container-3">
+              <div class="mermaid-controls">
+                <button class="mermaid-control-btn zoom-in" title="放大">
+                  <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="mermaid-control-btn zoom-out" title="缩小">
+                  <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="mermaid-control-btn reset-zoom" title="重置">
+                  <i class="fas fa-expand-arrows-alt"></i>
+                </button>
+                <button class="mermaid-control-btn fullscreen" title="全屏查看">
+                  <i class="fas fa-expand"></i>
+                </button>
+              </div>
+              <div class="mermaid">
+                graph LR
+                A["Raw Text Data"] --> B["Preprocessing Layer"]
+                B --> C["FinBERT Model"]
+                C --> D["Sentiment Scores [-1,1]"]
+                C --> E["Confidence Levels [0,1]"]
+                C --> F["Entity Recognition"]
+                D --> G["Time-Series Integration"]
+                E --> G
+                F --> G
+                G --> H["Agent Observation Space"]
+                G --> I["Reward Function"]
+
+                style A fill:#e1f5fe
+                style C fill:#fff3e0
+                style H fill:#e8f5e8
+                style I fill:#ffebee
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Data Generation Section -->
+      <section id="data-generation" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Synthetic Data Generation</h2>
+
+          <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <div class="section-card">
+              <h3 class="serif text-xl font-semibold mb-4">Statistical Models</h3>
+              <p class="text-gray-600 mb-4">
+                Traditional approaches using established time-series models that capture
+                key financial market characteristics like volatility clustering and mean reversion.
+              </p>
+
+              <div class="space-y-3">
+                <div class="p-3 border-l-4 border-blue-500">
+                  <h4 class="font-semibold text-blue-700">GARCH Models</h4>
+                  <p class="text-sm text-gray-600">
+                    Generalized Autoregressive Conditional Heteroskedasticity models
+                    specifically designed to capture volatility clustering patterns.
+                  </p>
+                </div>
+
+                <div class="p-3 border-l-4 border-green-500">
+                  <h4 class="font-semibold text-green-700">ARIMA Models</h4>
+                  <p class="text-sm text-gray-600">
+                    Autoregressive Integrated Moving Average models for generating
+                    time series with specific autocorrelation structures.
+                  </p>
+                </div>
+
+                <div class="p-3 border-l-4 border-purple-500">
+                  <h4 class="font-semibold text-purple-700">Jump-Diffusion</h4>
+                  <p class="text-sm text-gray-600">
+                    Models incorporating sudden price jumps to simulate market shocks
+                    and extreme events.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-card">
+              <h3 class="serif text-xl font-semibold mb-4">Generative AI Models</h3>
+              <p class="text-gray-600 mb-4">
+                Advanced neural network architectures capable of generating highly realistic
+                synthetic financial time series that preserve complex market dynamics.
+              </p>
+
+              <div class="space-y-3">
+                <div class="p-3 border-l-4 border-red-500">
+                  <h4 class="font-semibold text-red-700">TimeGAN</h4>
+                  <p class="text-sm text-gray-600">
+                    Temporal Generative Adversarial Network designed specifically for
+                    time-series data with preserved temporal dynamics.
+                    <a href="https://www.sciencedirect.com/science/article/abs/pii/S095070512300881X" class="citation" target="_blank">[202]</a>
+                  </p>
+                </div>
+
+                <div class="p-3 border-l-4 border-yellow-500">
+                  <h4 class="font-semibold text-yellow-700">Causal GAN</h4>
+                  <p class="text-sm text-gray-600">
+                    Preserves causal relationships between market factors and
+                    generates interpretable financial scenarios.
+                  </p>
+                </div>
+
+                <div class="p-3 border-l-4 border-indigo-500">
+                  <h4 class="font-semibold text-indigo-700">ITF-GAN</h4>
+                  <p class="text-sm text-gray-600">
+                    Interpretable Time-series Forecasting GAN for generating
+                    transparent, explainable synthetic data.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Generation Quality Metrics -->
+          <div class="section-card">
+            <h3 class="serif text-2xl font-semibold mb-6">Synthetic Data Quality Metrics</h3>
+            <div class="grid md:grid-cols-4 gap-6">
+              <div class="text-center p-4 bg-blue-50 rounded-lg">
+                <div class="text-blue-600 text-2xl mb-2">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Volatility Clustering</h4>
+                <div class="text-2xl font-bold text-blue-600 mb-1">0.92</div>
+                <div class="text-xs text-gray-600">Correlation with real data</div>
+              </div>
+
+              <div class="text-center p-4 bg-green-50 rounded-lg">
+                <div class="text-green-600 text-2xl mb-2">
+                  <i class="fas fa-bell-curve"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Fat Tails</h4>
+                <div class="text-2xl font-bold text-green-600 mb-1">0.88</div>
+                <div class="text-xs text-gray-600">Kurtosis match</div>
+              </div>
+
+              <div class="text-center p-4 bg-yellow-50 rounded-lg">
+                <div class="text-yellow-600 text-2xl mb-2">
+                  <i class="fas fa-sync-alt"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Mean Reversion</h4>
+                <div class="text-2xl font-bold text-yellow-600 mb-1">0.85</div>
+                <div class="text-xs text-gray-600">Autocorrelation fit</div>
+              </div>
+
+              <div class="text-center p-4 bg-purple-50 rounded-lg">
+                <div class="text-purple-600 text-2xl mb-2">
+                  <i class="fas fa-wave-square"></i>
+                </div>
+                <h4 class="font-semibold mb-2">Seasonality</h4>
+                <div class="text-2xl font-bold text-purple-600 mb-1">0.79</div>
+                <div class="text-xs text-gray-600">Periodic patterns</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Data Management Section -->
+      <section id="data-management" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Data Management and Integration</h2>
+
+          <div class="grid lg:grid-cols-2 gap-12">
+            <div>
+              <h3 class="serif text-2xl font-semibold mb-6">Hybrid Data Pipeline</h3>
+              <p class="mb-6">
+                Combining synthetic and real-world data creates a comprehensive training environment
+                that exposes agents to both controlled scenarios and genuine market complexity.
+                This hybrid approach ensures robust performance across diverse market conditions.
+              </p>
+
+              <div class="space-y-4">
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-blue-700">Historical Data Foundation</h4>
+                  <p class="text-sm text-gray-600">
+                    Real market data provides authentic price patterns, volume dynamics,
+                    and market microstructure for baseline agent training and validation.
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-green-700">Synthetic Augmentation</h4>
+                  <p class="text-sm text-gray-600">
+                    GAN-generated data supplements historical data with rare market regimes,
+                    extreme scenarios, and controlled experimental conditions.
+                  </p>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-purple-700">Regime-Specific Training</h4>
+                  <p class="text-sm text-gray-600">
+                    Data generation conditioned on specific market regimes (bull, bear, volatile)
+                    enables targeted agent training for diverse market environments.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <img src="https://kimi-img.moonshot.cn/pub/icon/spinner.svg" alt="Diagram of hybrid data pipeline for machine learning combining synthetic and real data sources" class="w-full rounded-lg shadow-lg mb-6" size="medium" aspect="wide" query="machine learning data pipeline synthetic real hybrid" referrerpolicy="no-referrer" />
+
+              <div class="section-card">
+                <h4 class="font-semibold mb-4">Data Pipeline Architecture</h4>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between p-3 bg-blue-50 rounded">
+                    <span class="text-sm font-medium">Data Ingestion</span>
+                    <div class="flex space-x-1">
+                      <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">API</span>
+                      <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">CSV</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-green-50 rounded">
+                    <span class="text-sm font-medium">Validation & Cleaning</span>
+                    <div class="flex space-x-1">
+                      <span class="bg-green-600 text-white px-2 py-1 rounded text-xs">Quality</span>
+                      <span class="bg-green-600 text-white px-2 py-1 rounded text-xs">Format</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-yellow-50 rounded">
+                    <span class="text-sm font-medium">Feature Engineering</span>
+                    <div class="flex space-x-1">
+                      <span class="bg-yellow-600 text-white px-2 py-1 rounded text-xs">Technical</span>
+                      <span class="bg-yellow-600 text-white px-2 py-1 rounded text-xs">Sentiment</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-purple-50 rounded">
+                    <span class="text-sm font-medium">Storage & Access</span>
+                    <div class="flex space-x-1">
+                      <span class="bg-purple-600 text-white px-2 py-1 rounded text-xs">Cache</span>
+                      <span class="bg-purple-600 text-white px-2 py-1 rounded text-xs">Stream</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Synthetic Sentiment Data -->
+          <div class="section-card mt-8">
+            <h3 class="serif text-2xl font-semibold mb-6">Synthetic Sentiment Generation</h3>
+            <div class="grid md:grid-cols-2 gap-8">
+              <div>
+                <p class="mb-4">
+                  Beyond price data, we can generate synthetic sentiment data correlated with
+                  synthetic price movements. This enables testing the agent's ability to
+                  incorporate qualitative information in controlled experimental settings.
+                </p>
+
+                <div class="space-y-3">
+                  <div class="p-3 border-l-4 border-blue-500 bg-blue-50">
+                    <h4 class="font-semibold text-blue-700">Sentiment GAN</h4>
+                    <p class="text-sm text-gray-600">
+                      Separate generative model trained on real sentiment data to produce
+                      realistic sentiment scores and news-like text.
+                    </p>
+                  </div>
+
+                  <div class="p-3 border-l-4 border-green-500 bg-green-50">
+                    <h4 class="font-semibold text-green-700">Price-Sentiment Correlation</h4>
+                    <p class="text-sm text-gray-600">
+                      Synthetic sentiment data maintains realistic correlation patterns
+                      with price movements, enabling meaningful agent training.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <img src="https://kimi-img.moonshot.cn/pub/icon/spinner.svg" alt="Machine learning system generating synthetic financial data" class="w-full rounded-lg shadow-lg" size="medium" aspect="wide" query="synthetic financial data generation" referrerpolicy="no-referrer" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard UI Section -->
+      <section id="dashboard-ui" class="py-16 bg-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Streamlit Dashboard Refactoring</h2>
+
+          <div class="grid lg:grid-cols-2 gap-12 mb-12">
+            <div>
+              <h3 class="serif text-2xl font-semibold mb-6">Tab-Based Interface Design</h3>
+              <p class="mb-6">
+                The redesigned dashboard features a clean, tab-based navigation system that
+                logically separates training, backtesting, and live trading functionalities.
+                This structure provides intuitive access to all agent management features.
+              </p>
+
+              <div class="space-y-3">
+                <div class="flex items-center p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                  <div class="bg-blue-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-graduation-cap"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-blue-700">Training Tab</h4>
+                    <p class="text-sm text-gray-600">
+                      Configure hyperparameters, select training data, monitor progress,
+                      and manage model checkpoints with real-time visualization.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
+                  <div class="bg-green-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-history"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-green-700">Backtesting Tab</h4>
+                    <p class="text-sm text-gray-600">
+                      Test trained agents on historical data, analyze performance metrics,
+                      and compare different agent configurations across market regimes.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center p-4 bg-red-50 rounded-lg border-l-4 border-red-500">
+                  <div class="bg-red-600 text-white w-10 h-10 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-rocket"></i>
+                  </div>
+                  <div>
+                    <h4 class="font-semibold text-red-700">Live Trading Tab</h4>
+                    <p class="text-sm text-gray-600">
+                      Deploy agents in real markets with live data feeds, risk management
+                      controls, and real-time performance monitoring.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <img src="https://kimi-img.moonshot.cn/pub/icon/spinner.svg" alt="Trading platform dashboard with training and monitoring sections" class="w-full rounded-lg shadow-lg mb-6" size="large" aspect="wide" style="photo" query="trading platform dashboard interface" referrerpolicy="no-referrer" />
+
+              <div class="section-card">
+                <h4 class="font-semibold mb-4">Dashboard Features</h4>
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="text-center p-3 bg-gray-50 rounded">
+                    <i class="fas fa-chart-bar text-emerald-600 text-xl mb-2"></i>
+                    <div class="text-sm font-medium">Performance Metrics</div>
+                  </div>
+                  <div class="text-center p-3 bg-gray-50 rounded">
+                    <i class="fas fa-cog text-emerald-600 text-xl mb-2"></i>
+                    <div class="text-sm font-medium">Configuration</div>
+                  </div>
+                  <div class="text-center p-3 bg-gray-50 rounded">
+                    <i class="fas fa-eye text-emerald-600 text-xl mb-2"></i>
+                    <div class="text-sm font-medium">Real-time Monitoring</div>
+                  </div>
+                  <div class="text-center p-3 bg-gray-50 rounded">
+                    <i class="fas fa-download text-emerald-600 text-xl mb-2"></i>
+                    <div class="text-sm font-medium">Export Results</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Performance Metrics Dashboard -->
+          <div class="section-card">
+            <h3 class="serif text-2xl font-semibold mb-6 text-center">Key Performance Metrics Visualization</h3>
+            <div class="grid md:grid-cols-4 gap-6">
+              <div class="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                <div class="text-blue-600 text-2xl mb-2">
+                  <i class="fas fa-dollar-sign"></i>
+                </div>
+                <h4 class="font-semibold text-blue-700">PnL Tracking</h4>
+                <p class="text-sm text-gray-600 mt-2">
+                  Real-time profit/loss visualization with drawdown analysis and equity curve plotting.
+                </p>
+              </div>
+
+              <div class="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                <div class="text-green-600 text-2xl mb-2">
+                  <i class="fas fa-balance-scale"></i>
+                </div>
+                <h4 class="font-semibold text-green-700">Sharpe Ratio</h4>
+                <p class="text-sm text-gray-600 mt-2">
+                  Risk-adjusted return metrics with rolling window calculations and benchmark comparisons.
+                </p>
+              </div>
+
+              <div class="text-center p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg">
+                <div class="text-red-600 text-2xl mb-2">
+                  <i class="fas fa-chart-line-down"></i>
+                </div>
+                <h4 class="font-semibold text-red-700">Max Drawdown</h4>
+                <p class="text-sm text-gray-600 mt-2">
+                  Maximum peak-to-trough decline analysis with recovery time tracking.
+                </p>
+              </div>
+
+              <div class="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                <div class="text-purple-600 text-2xl mb-2">
+                  <i class="fas fa-trophy"></i>
+                </div>
+                <h4 class="font-semibold text-purple-700">Win Rate</h4>
+                <p class="text-sm text-gray-600 mt-2">
+                  Trade success analysis with average profit/loss per trade and holding period statistics.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Real-time Trading Section -->
+      <section id="real-time-trading" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <h2 class="serif text-4xl font-bold mb-12">Real-Time Trading Integration</h2>
+
+          <div class="grid lg:grid-cols-2 gap-12">
+            <div>
+              <h3 class="serif text-2xl font-semibold mb-6">Live Market Connectivity</h3>
+              <p class="mb-6">
+                The refactored Willowdean agent includes comprehensive support for live trading
+                through API integrations with data providers and brokerage platforms.
+                This enables seamless deployment from backtesting to real-world execution.
+              </p>
+
+              <div class="space-y-4">
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-blue-700">Data Feed Integration</h4>
+                  <p class="text-sm text-gray-600 mb-3">
+                    Real-time market data connections through APIs like Alpha Vantage and Quandl,
+                    providing live price feeds, volume data, and market indicators.
+                  </p>
+                  <div class="flex space-x-2">
+                    <span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">Alpha Vantage</span>
+                    <span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">Quandl</span>
+                    <span class="bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs">YFinance</span>
+                  </div>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-green-700">Brokerage API</h4>
+                  <p class="text-sm text-gray-600 mb-3">
+                    Direct integration with trading platforms like MetaTrader and Interactive Brokers
+                    for automated trade execution and position management.
+                  </p>
+                  <div class="flex space-x-2">
+                    <span class="bg-green-100 text-green-600 px-2 py-1 rounded text-xs">MetaTrader</span>
+                    <span class="bg-green-100 text-green-600 px-2 py-1 rounded text-xs">IBKR</span>
+                  </div>
+                </div>
+
+                <div class="metric-card">
+                  <h4 class="font-semibold mb-2 text-purple-700">Sentiment Feeds</h4>
+                  <p class="text-sm text-gray-600 mb-3">
+                    Real-time news and social media data streams for continuous
+                    sentiment analysis and market mood tracking.
+                  </p>
+                  <div class="flex space-x-2">
+                    <span class="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">News API</span>
+                    <span class="bg-purple-100 text-purple-600 px-2 py-1 rounded text-xs">Twitter</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <img src="https://kimi-img.moonshot.cn/pub/icon/spinner.svg" alt="Algorithmic trading platform with real-time market integration" class="w-full rounded-lg shadow-lg mb-6" size="medium" aspect="wide" style="photo" query="algorithmic trading platform interface" referrerpolicy="no-referrer" />
+
+              <div class="section-card">
+                <h4 class="font-semibold mb-4">System Architecture</h4>
+                <div class="space-y-4">
+                  <div class="flex items-center justify-between p-3 bg-blue-50 rounded">
+                    <span class="text-sm font-medium">Data Ingestion Layer</span>
+                    <div class="flex space-x-1">
+                      <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">Live</span>
+                      <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs">Historical</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-green-50 rounded">
+                    <span class="text-sm font-medium">Agent Decision Engine</span>
+                    <div class="flex space-x-1">
+                      <span class="bg-green-600 text-white px-2 py-1 rounded text-xs">Ensemble</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-yellow-50 rounded">
+                    <span class="text-sm font-medium">Risk Management</span>
+                    <div class="flex space-x-1">
+                      <span class="bg-yellow-600 text-white px-2 py-1 rounded text-xs">Real-time</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-red-50 rounded">
+                    <span class="text-sm font-medium">Execution Layer</span>
+                    <div class="flex space-x-1">
+                      <span class="bg-red-600 text-white px-2 py-1 rounded text-xs">Automated</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk Management Controls -->
+          <div class="section-card mt-8">
+            <h3 class="serif text-2xl font-semibold mb-6">Risk Management and Safety Guardrails</h3>
+            <div class="grid md:grid-cols-2 gap-8">
+              <div>
+                <h4 class="font-semibold mb-4 text-red-700">Position Controls</h4>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between p-3 bg-red-50 rounded">
+                    <span class="text-sm font-medium">Maximum Position Size</span>
+                    <span class="bg-red-600 text-white px-3 py-1 rounded text-sm">25%</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-red-50 rounded">
+                    <span class="text-sm font-medium">Portfolio Leverage Limit</span>
+                    <span class="bg-red-600 text-white px-3 py-1 rounded text-sm">2x</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-red-50 rounded">
+                    <span class="text-sm font-medium">Single Asset Exposure</span>
+                    <span class="bg-red-600 text-white px-3 py-1 rounded text-sm">10%</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 class="font-semibold mb-4 text-orange-700">Loss Protection</h4>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between p-3 bg-orange-50 rounded">
+                    <span class="text-sm font-medium">Stop-Loss per Trade</span>
+                    <span class="bg-orange-600 text-white px-3 py-1 rounded text-sm">-5%</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-orange-50 rounded">
+                    <span class="text-sm font-medium">Daily Loss Limit</span>
+                    <span class="bg-orange-600 text-white px-3 py-1 rounded text-sm">-3%</span>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-orange-50 rounded">
+                    <span class="text-sm font-medium">Circuit Breaker</span>
+                    <span class="bg-orange-600 text-white px-3 py-1 rounded text-sm">-10%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+              <h4 class="font-semibold mb-3 text-purple-700">Operational Safety</h4>
+              <div class="grid md:grid-cols-3 gap-4">
+                <div class="text-center p-3 bg-purple-50 rounded">
+                  <i class="fas fa-pause text-purple-600 text-xl mb-2"></i>
+                  <div class="text-sm font-medium">Emergency Stop</div>
+                  <div class="text-xs text-gray-600">Immediate position liquidation</div>
+                </div>
+                <div class="text-center p-3 bg-purple-50 rounded">
+                  <i class="fas fa-clock text-purple-600 text-xl mb-2"></i>
+                  <div class="text-sm font-medium">Trading Hours</div>
+                  <div class="text-xs text-gray-600">Market session restrictions</div>
+                </div>
+                <div class="text-center p-3 bg-purple-50 rounded">
+                  <i class="fas fa-shield-alt text-purple-600 text-xl mb-2"></i>
+                  <div class="text-sm font-medium">API Failover</div>
+                  <div class="text-xs text-gray-600">Redundant connections</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Footer -->
+      <footer class="py-12 bg-gray-900 text-white">
+        <div class="container mx-auto px-8 max-w-6xl">
+          <div class="text-center">
+            <h3 class="serif text-2xl font-bold mb-4">Willowdean Trading Agent Refactoring</h3>
+            <p class="text-gray-400 mb-6">
+              A comprehensive architectural overhaul implementing ensemble reinforcement learning,
+              sentiment integration, and risk-aware reward mechanisms.
+            </p>
+            <div class="flex justify-center space-x-8 text-sm text-gray-400">
+              <span><i class="fas fa-graduation-cap mr-2"></i>Multi-Epoch Training</span>
+              <span><i class="fas fa-users mr-2"></i>Ensemble Methods</span>
+              <span><i class="fas fa-comments mr-2"></i>Sentiment Analysis</span>
+              <span><i class="fas fa-shield-alt mr-2"></i>Risk Management</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                // Primary colors with high contrast
+                primaryColor: '#ffffff',
+                primaryTextColor: '#1f2937',
+                primaryBorderColor: '#1e3a2e',
+                
+                // Secondary colors
+                secondaryColor: '#f8f9fa',
+                secondaryTextColor: '#374151',
+                secondaryBorderColor: '#2d5a3d',
+                
+                // Tertiary colors
+                tertiaryColor: '#f0f9ff',
+                tertiaryTextColor: '#1e40af',
+                tertiaryBorderColor: '#3b82f6',
+                
+                // Background colors
+                background: '#ffffff',
+                mainBkg: '#ffffff',
+                secondBkg: '#f8f9fa',
+                tertiaryBkg: '#f0f9ff',
+                
+                // Node colors with high contrast
+                cScale0: '#e1f5fe',
+                cScale1: '#e8f5e8', 
+                cScale2: '#fff3e0',
+                cScale3: '#f3e5f5',
+                cScale4: '#ffebee',
+                cScale5: '#e8eaf6',
+                
+                // Text colors for high contrast
+                cScaleLabel0: '#1f2937',
+                cScaleLabel1: '#1f2937',
+                cScaleLabel2: '#1f2937',
+                cScaleLabel3: '#1f2937',
+                cScaleLabel4: '#1f2937',
+                cScaleLabel5: '#1f2937',
+                
+                // Lines and borders
+                lineColor: '#374151',
+                edgeLabelBackground: '#ffffff',
+                
+                // Cluster colors
+                clusterBkg: '#f8f9fa',
+                clusterBorder: '#d1d5db',
+                
+                // Title colors
+                titleColor: '#1f2937',
+                
+                // Font settings
+                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+                fontSize: '14px'
+            },
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true,
+                curve: 'basis',
+                padding: 20
+            },
+            graph: {
+                useMaxWidth: false,
+                htmlLabels: true
+            },
+            sequence: {
+                useMaxWidth: false,
+                wrap: true
+            }
+        });
+
+        // Initialize Mermaid Controls for zoom and pan
+        function initializeMermaidControls() {
+            const containers = document.querySelectorAll('.mermaid-container');
+
+            containers.forEach(container => {
+            const mermaidElement = container.querySelector('.mermaid');
+            let scale = 1;
+            let isDragging = false;
+            let startX, startY, translateX = 0, translateY = 0;
+
+            // 触摸相关状态
+            let isTouch = false;
+            let touchStartTime = 0;
+            let initialDistance = 0;
+            let initialScale = 1;
+            let isPinching = false;
+
+            // Zoom controls
+            const zoomInBtn = container.querySelector('.zoom-in');
+            const zoomOutBtn = container.querySelector('.zoom-out');
+            const resetBtn = container.querySelector('.reset-zoom');
+            const fullscreenBtn = container.querySelector('.fullscreen');
+
+            function updateTransform() {
+                mermaidElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+                if (scale > 1) {
+                container.classList.add('zoomed');
+                } else {
+                container.classList.remove('zoomed');
+                }
+
+                mermaidElement.style.cursor = isDragging ? 'grabbing' : 'grab';
+            }
+
+            if (zoomInBtn) {
+                zoomInBtn.addEventListener('click', () => {
+                scale = Math.min(scale * 1.25, 4);
+                updateTransform();
+                });
+            }
+
+            if (zoomOutBtn) {
+                zoomOutBtn.addEventListener('click', () => {
+                scale = Math.max(scale / 1.25, 0.3);
+                if (scale <= 1) {
+                    translateX = 0;
+                    translateY = 0;
+                }
+                updateTransform();
+                });
+            }
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                scale = 1;
+                translateX = 0;
+                translateY = 0;
+                updateTransform();
+                });
+            }
+
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', () => {
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                } else if (container.msRequestFullscreen) {
+                    container.msRequestFullscreen();
+                }
+                });
+            }
+
+            // Mouse Events
+            mermaidElement.addEventListener('mousedown', (e) => {
+                if (isTouch) return; // 如果是触摸设备，忽略鼠标事件
+
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                mermaidElement.style.cursor = 'grabbing';
+                updateTransform();
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging && !isTouch) {
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                updateTransform();
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging && !isTouch) {
+                isDragging = false;
+                mermaidElement.style.cursor = 'grab';
+                updateTransform();
+                }
+            });
+
+            document.addEventListener('mouseleave', () => {
+                if (isDragging && !isTouch) {
+                isDragging = false;
+                mermaidElement.style.cursor = 'grab';
+                updateTransform();
+                }
+            });
+
+            // 获取两点之间的距离
+            function getTouchDistance(touch1, touch2) {
+                return Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+                );
+            }
+
+            // Touch Events - 触摸事件处理
+            mermaidElement.addEventListener('touchstart', (e) => {
+                isTouch = true;
+                touchStartTime = Date.now();
+
+                if (e.touches.length === 1) {
+                // 单指拖动
+                isPinching = false;
+                isDragging = true;
+
+                const touch = e.touches[0];
+                startX = touch.clientX - translateX;
+                startY = touch.clientY - translateY;
+
+                } else if (e.touches.length === 2) {
+                // 双指缩放
+                isPinching = true;
+                isDragging = false;
+
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                initialDistance = getTouchDistance(touch1, touch2);
+                initialScale = scale;
+                }
+
+                e.preventDefault();
+            }, { passive: false });
+
+            mermaidElement.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && isDragging && !isPinching) {
+                // 单指拖动
+                const touch = e.touches[0];
+                translateX = touch.clientX - startX;
+                translateY = touch.clientY - startY;
+                updateTransform();
+
+                } else if (e.touches.length === 2 && isPinching) {
+                // 双指缩放
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = getTouchDistance(touch1, touch2);
+
+                if (initialDistance > 0) {
+                    const newScale = Math.min(Math.max(
+                    initialScale * (currentDistance / initialDistance),
+                    0.3
+                    ), 4);
+                    scale = newScale;
+                    updateTransform();
+                }
+                }
+
+                e.preventDefault();
+            }, { passive: false });
+
+            mermaidElement.addEventListener('touchend', (e) => {
+                // 重置状态
+                if (e.touches.length === 0) {
+                isDragging = false;
+                isPinching = false;
+                initialDistance = 0;
+
+                // 延迟重置isTouch，避免鼠标事件立即触发
+                setTimeout(() => {
+                    isTouch = false;
+                }, 100);
+                } else if (e.touches.length === 1 && isPinching) {
+                // 从双指变为单指，切换为拖动模式
+                isPinching = false;
+                isDragging = true;
+
+                const touch = e.touches[0];
+                startX = touch.clientX - translateX;
+                startY = touch.clientY - translateY;
+                }
+
+                updateTransform();
+            });
+
+            mermaidElement.addEventListener('touchcancel', (e) => {
+                isDragging = false;
+                isPinching = false;
+                initialDistance = 0;
+
+                setTimeout(() => {
+                isTouch = false;
+                }, 100);
+
+                updateTransform();
+            });
+
+            // Enhanced wheel zoom with better center point handling
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const newScale = Math.min(Math.max(scale * delta, 0.3), 4);
+
+                // Adjust translation to zoom towards center
+                if (newScale !== scale) {
+                const scaleDiff = newScale / scale;
+                translateX = translateX * scaleDiff;
+                translateY = translateY * scaleDiff;
+                scale = newScale;
+
+                if (scale <= 1) {
+                    translateX = 0;
+                    translateY = 0;
+                }
+
+                updateTransform();
+                }
+            });
+
+            // Initialize display
+            updateTransform();
+            });
+        }
+
+        // Initialize controls after DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMermaidControls();
+        });
+
+        // Smooth scrolling for TOC links and active state management
+        document.addEventListener('DOMContentLoaded', function() {
+            const tocLinks = document.querySelectorAll('.toc-link');
+            const sections = document.querySelectorAll('section[id]');
+            
+            // Smooth scrolling
+            tocLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+            
+            // Active section highlighting
+            function updateActiveSection() {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop - 100;
+                    const sectionHeight = section.offsetHeight;
+                    
+                    if (window.scrollY >= sectionTop && window.scrollY < sectionTop + sectionHeight) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                
+                tocLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === '#' + current) {
+                        link.classList.add('active');
+                    }
+                });
+            }
+            
+            window.addEventListener('scroll', updateActiveSection);
+            updateActiveSection(); // Initial call
+        });
+    </script>
+  </body>
+
+</html>
