@@ -1,0 +1,4 @@
+class PPOAgent(TradingAgent):
+    def __init__(self, env):
+        model = PPO("MlpPolicy", env, verbose=1)
+        super().__init__(env, model)

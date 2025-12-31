@@ -1,0 +1,23 @@
+def compute_reward(self, portfolio_value, previous_portfolio_value, 
+                  drawdown, volatility_window, transaction_cost):
+    # PnL component
+    pnl = portfolio_value - previous_portfolio_value
+    
+    # Volatility penalty
+    returns = self.past_returns[-volatility_window:]
+    volatility_penalty = -np.std(returns) if len(returns) > 1 else 0
+    
+    # Drawdown penalty
+    peak = max(self.portfolio_values)
+    drawdown_penalty = -(peak - portfolio_value) / peak
+    
+    # Transaction cost penalty
+    cost_penalty = -transaction_cost
+    
+    # Composite reward
+    total_reward = (self.pnl_weight * pnl +
+                    self.volatility_weight * volatility_penalty +
+                    self.drawdown_weight * drawdown_penalty +
+                    self.cost_weight * cost_penalty)
+    
+    return total_reward

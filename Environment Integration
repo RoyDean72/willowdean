@@ -1,0 +1,11 @@
+def integrate_sentiment(self, observation, sentiment_scores):
+    # Normalize sentiment scores
+    normalized_sentiment = (sentiment_scores - 0.5) * 2
+    
+    # Combine with existing observation features
+    enhanced_observation = np.concatenate([
+        observation,  # Existing features
+        normalized_sentiment  # Sentiment features
+    ])
+    
+    return enhanced_observation
